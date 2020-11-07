@@ -1,85 +1,103 @@
-var PORT = process.env.PORT || 8000;
-var moment = require('moment');
-var express = require('express');
-var app = express();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
+// import * as moment from "moment";
+
+const moment = require('moment');
+const express = require('express');
+const app = express();
+const http = require('http').Server(app);
+const {MessageBuilder, Message} = require('./models/message');
+const io = require('socket.io')(http);
+// const mongoose = require('mongoose');
+// import { MessageBuilder, Message } from 'models/message';
+require('./connection');
+
+const PORT = process.env.PORT || 8000;
+const saveMessages = {welcome: false, join: false, leave: false, user: true, currentUsers: false};
+
 
 app.use(express.static(__dirname + '/public'));
 
-var clientInfo = {};
+const clientInfo = {};
 
 // Sends current users to provided socket
-function sendCurrentUsers (socket) {
-	var info = clientInfo[socket.id];
-	var users = [];
+const sendCurrentUsers = socket => {
+    const info = clientInfo[socket.id];
+    const users = [];
 
-	if (typeof info === 'undefined') {
-		return;
-	}
+    if (typeof info === 'undefined') {
+        return;
+    }
 
-	Object.keys(clientInfo).forEach(function (socketId) {
-		var userInfo = clientInfo[socketId];
+    Object.keys(clientInfo).forEach(function (socketId) {
+        const userInfo = clientInfo[socketId];
 
-		if (info.room === userInfo.room) {
-			users.push(userInfo.name);
-		}
-	});
+        if (info.room === userInfo.room) {
+            users.push(userInfo.name);
+        }
+    });
 
-	socket.emit('message', {
-		name: 'System',
-		text: 'Current users: ' + users.join(', '),
-		timestamp: moment().valueOf()
-	});
+    const name = 'System', text = 'Current users: ' + users.join(', '), timestamp = moment().valueOf();
+    if (saveMessages.welcome) saveMessage(name, text, timestamp, clientInfo[socket.id].room);
+    socket.emit('message', { name, text, timestamp });
+}
+
+const saveMessage = (name, text, timestamp, collection = undefined) => {
+    const dbMessage = collection ? new (MessageBuilder(collection))({name, text, timestamp}) : new Message({
+        name,
+        text,
+        timestamp
+    });
+    dbMessage.save();
 }
 
 io.on('connection', function (socket) {
-	console.log('User connected via socket.io!');
+    console.log('User connected via socket.io!');
 
-	socket.on('disconnect', function () {
-		var userData = clientInfo[socket.id];
+    socket.on('disconnect', function () {
+        const userData = clientInfo[socket.id];
 
-		if (typeof userData !== 'undefined') {
-			socket.leave(userData.room);
-			io.to(userData.room).emit('message', {
-				name: 'System',
-				text: userData.name + ' has left!',
-				timestamp: moment().valueOf()
-			});
-			delete clientInfo[socket.id];
-		}
-	});
+        if (typeof userData !== 'undefined') {
+            socket.leave(userData.room);
+            const name = 'System', text = userData.name + ' has left!', timestamp = moment().valueOf();
+            if (saveMessages.leave) saveMessage(name, text, timestamp, clientInfo[socket.id].room);
+            io.to(userData.room).emit('message', {name, text, timestamp});
+            delete clientInfo[socket.id];
+        }
+    });
 
-	socket.on('joinRoom', function (req) {
-		clientInfo[socket.id] = req;
-		socket.join(req.room);
-		socket.broadcast.to(req.room).emit('message', {
-			name: 'System',
-			text: req.name + ' has joined!',
-			timestamp: moment().valueOf()
-		});
-	});
+    socket.on('joinRoom', function (req) {
+        clientInfo[socket.id] = req;
+        MessageBuilder(req.room).find({}).then(messages => messages.forEach(message => socket.emit('message', {
+            name: message.name,
+            text: message.text,
+            timestamp: message.timestamp
+        })));
+        socket.join(req.room);
+        const name = 'System', text = req.name + ' has joined!', timestamp = moment().valueOf();
+        if (saveMessages.join) saveMessage(name, text, timestamp, req.room);
+        socket.broadcast.to(req.room).emit('message', {name, text, timestamp});
+    });
 
-	socket.on('message', function (message) {
-		console.log('Message received: ' + message.text);
+    socket.on('message', function (message) {
+        console.log('Message received: ' + message.text);
 
-		if (message.text === '@currentUsers') {
-			sendCurrentUsers(socket);
-		} else {
-			message.timestamp = moment().valueOf();
-			io.to(clientInfo[socket.id].room).emit('message', message);	
-		}
-	});
+        if (message.text === '@currentUsers') {
+            sendCurrentUsers(socket);
+        } else {
+            const name = message.name, text = message.text, timestamp = moment().valueOf();
+            if (saveMessages.user) saveMessage(name, text, timestamp, clientInfo[socket.id].room);
+            message.timestamp = timestamp;
+            io.to(clientInfo[socket.id].room).emit('message', message);
+        }
+    });
 
-	// timestamp property - JavaScript timestamp (milliseconds)
+    // timestamp property - JavaScript timestamp (milliseconds)
 
-	socket.emit('message', {
-		name: 'System',
-		text: 'Welcome to the chat application!',
-		timestamp: moment().valueOf()
-	});
+    const name = 'System', text = 'Welcome to the chat application!', timestamp = moment().valueOf();
+    if (saveMessages.welcome) saveMessage(name, text, timestamp, clientInfo[socket.id].room);
+    socket.emit('message', {name, text, timestamp});
 });
 
+
 http.listen(PORT, function () {
-	console.log('Server started!');
+    console.log('Server started!');
 });

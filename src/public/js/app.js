@@ -1,6 +1,6 @@
-var name = getQueryVariable('name') || 'Anonymous';
-var room = getQueryVariable('room');
-var socket = io();
+const name = getQueryVariable('name') || 'Anonymous';
+const room = getQueryVariable('room');
+const socket = io();
 
 console.log(name + ' wants to join ' + room);
 
@@ -8,7 +8,7 @@ console.log(name + ' wants to join ' + room);
 jQuery('.room-title').text(room);
 
 socket.on('connect', function () {
-	console.log('Conncted to socket.io server!');
+	console.log('Connected to socket.io server!');
 	socket.emit('joinRoom', {
 		name: name,
 		room: room
@@ -16,9 +16,9 @@ socket.on('connect', function () {
 });
 
 socket.on('message', function (message) {
-	var momentTimestamp = moment.utc(message.timestamp);
-	var $messages = jQuery('.messages');
-	var $message = jQuery('<li class="list-group-item"></li>');
+	const momentTimestamp = moment.utc(message.timestamp);
+	const $messages = jQuery('.messages');
+	const $message = jQuery('<li class="list-group-item"></li>');
 
 	console.log('New message:');
 	console.log(message.text);
