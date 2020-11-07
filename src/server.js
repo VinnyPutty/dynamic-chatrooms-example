@@ -47,7 +47,14 @@ const saveMessage = (name, text, timestamp, collection = undefined) => {
         timestamp
     });
     dbMessage.save();
-}
+};
+
+const getMessages = (room) => {
+    return MessageBuilder(room).find({
+        $query: {},
+        $orderby: { timestamp: 1 }
+    });
+};
 
 io.on('connection', function (socket) {
     console.log('User connected via socket.io!');
@@ -66,11 +73,7 @@ io.on('connection', function (socket) {
 
     socket.on('joinRoom', function (req) {
         clientInfo[socket.id] = req;
-        MessageBuilder(req.room).find({}).then(messages => messages.forEach(message => socket.emit('message', {
-            name: message.name,
-            text: message.text,
-            timestamp: message.timestamp
-        })));
+        getMessages(req.room).then(messages => messages.forEach(({ name, text, timestamp }) => socket.emit('message', { name, text, timestamp })));
         socket.join(req.room);
         const name = 'System', text = req.name + ' has joined!', timestamp = moment().valueOf();
         if (saveMessages.join) saveMessage(name, text, timestamp, req.room);
