@@ -7,6 +7,6 @@ const messageSchema = new mongoose.Schema({
 });
 
 module.exports = {
-    MessageBuilder:  (collection = undefined)  =>  mongoose.model('Message', messageSchema, collection),
+    MessageBuilder: (collection = undefined) => collection ? mongoose.model('Message', messageSchema, collection) : mongoose.model('Message', messageSchema),
     Message: mongoose.model('Message', messageSchema)
 }
