@@ -41,11 +41,7 @@ const sendCurrentUsers = socket => {
 }
 
 const saveMessage = (name, text, timestamp, collection = undefined) => {
-    const dbMessage = collection ? new (MessageBuilder(collection))({name, text, timestamp}) : new Message({
-        name,
-        text,
-        timestamp
-    });
+    const dbMessage = collection ? new (MessageBuilder(collection))({ name, text, timestamp }) : new Message({ name, text, timestamp });
     dbMessage.save();
 };
 
@@ -97,7 +93,7 @@ io.on('connection', function (socket) {
 
     const name = 'System', text = 'Welcome to the chat application!', timestamp = moment().valueOf();
     if (saveMessages.welcome) saveMessage(name, text, timestamp, clientInfo[socket.id].room);
-    socket.emit('message', {name, text, timestamp});
+    socket.emit('message', { name, text, timestamp });
 });
 
 
