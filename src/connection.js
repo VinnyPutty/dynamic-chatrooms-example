@@ -5,4 +5,13 @@ const uri = `mongodb+srv://pablo:${password}@cluster0.2zxmb.mongodb.net/${dbname
 mongoose.connect(uri, {useUnifiedTopology: true, useNewUrlParser: true}, (err) => {
     if (err) console.error('Mongoose connection error:', err)
     else console.log("connected to db");
-})
+});
+
+module.exports = {
+    connection: mongoose,
+    uri,
+    connectionParams: {
+        useUnifiedTopology: true,
+        useNewUrlParser: true
+    }
+}
