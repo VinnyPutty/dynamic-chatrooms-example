@@ -6,12 +6,11 @@ const app = express();
 const http = require('http').Server(app);
 const {MessageBuilder, Message} = require('./models/message');
 const io = require('socket.io')(http);
-// const mongoose = require('mongoose');
-// import { MessageBuilder, Message } from 'models/message';
-require('./connection');
+const { connection, uri, connectionParams } = require('./connection');
 
 const PORT = process.env.PORT || 8000;
-const saveMessages = {welcome: false, join: false, leave: false, user: true, currentUsers: false};
+const saveMessages = { welcome: false, join: false, leave: false, user: true, currentUsers: false };
+const dbOptions = { keepAlive: true }
 
 
 app.use(express.static(__dirname + '/public'));
